@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+import "cloudstate/entity_key.proto";
+
+package cloudstate.samples.social.polls;
+
+
+message UserVote{
+    string user = 1;
+}
+
+message BasicPoll {
+    string name = 1 [(.cloudstate.entity_key) = true];
+}
+
+message BasicPollVote {
+    string name = 1 [(.cloudstate.entity_key) = true];
+    UserVote vote = 2;
+}
+
+message BasicPollCount {
+    int32 total = 2;
+}
+
+message Empty {
+}
+
+service BasicPollService {
+    rpc AddUserVote(BasicPollVote) returns (Empty);
+    rpc GetCounts(BasicPoll) returns (stream BasicPollCount);
+}

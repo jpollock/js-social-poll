@@ -1,0 +1,20 @@
+{
+  "name": "js-social-poll",
+  "version": "0.0.1",
+  "description": "Simple voting app for Akka Serverless",
+  "main": "index.js",
+  "scripts": {
+    "build": "compile-descriptor ./social-poll.proto",
+    "start": "node index.js"
+  },
+  "author": "Jeremy Pollock",
+  "license": "Apache License 2.0",
+  "engineStrict": true,
+  "engines": {
+    "node": "~12"
+  },
+  "dependencies": {
+    "cloudstate": "0.0.3",
+    "minimist": ">=0.2.1"
+  }
+}
