@@ -1,0 +1,108 @@
+= Simple Poll service
+Lightbend, 2020
+Version 0.0.1, 2020-11-24
+:description: "Simple Poll" stateful service
+:keywords: Cloudstate, stateful serverless, social voting
+:sectnums:
+:toc:
+ifdef::env-github[]
+:tip-caption: :bulb:
+:note-caption: :information_source:
+:important-caption: :heavy_exclamation_mark:
+:caution-caption: :fire:
+:warning-caption: :warning:
+endif::[]
+
+[[poll-service-overview]]
+== Poll service - Overview
+
+`Poll` is a stateful service which has no UI. It uses a https://cloudstate.io/docs/core/current/user/features/crdts.html#crdts-available-in-cloudstate[ORSet CRDT]
+to track the set of users voting for a particular poll entity.
+
+[[building-the-poll-service]]
+== Building the Poll service
+
+=== Build the Docker image
+
+Build a docker image with the following name attributes:
+
+* Docker registry ID. Let's assume your DockerID on https://hub.docker.com/ is `mydockerregistry`
+* image name: `js-social-poll`
+* version: `latest`
+
+The docker image tag will be `mydockerregistry/js-social-poll:latest`
+
+[source,shell]
+----
+
+DOCKER_PUBLISH_TO=mydockerregistry
+
+# build docker image
+docker build . -t $DOCKER_PUBLISH_TO/js-social-poll:latest
+
+# authenticate with your Docker registry
+docker login
+
+# push the docker image to your registry
+docker push $DOCKER_PUBLISH_TO/js-social-poll:latest
+----
+
+== Testing Poll service
+
+=== Testing with gRPCurl
+
+We can use `gRPCurl` to test our service. Make sure you have installed `gRPCurl` as mentioned in the <<../README.adoc#tool-prerequisites,Tools Prerequisites>> section.
+
+Discover the services exposed at our gRPC server, implemented by the Cloudstate proxy:
+
+[source,shell]
+----
+$ grpcurl -plaintext localhost:9002 list
+
+# console output
+cloudstate.samples.social.polls.BasicPollService
+grpc.reflection.v1alpha.ServerReflection
+----
+
+Then review the metadata of the `Poll` service
+
+[source,shell]
+----
+$ grpcurl -plaintext localhost:9002 describe cloudstate.samples.social.polls.BasicPollService
+
+# console output
+cloudstate.samples.social.polls.BasicPollService is a service:
+service BasicPollService {
+  rpc AddUserVote ( .cloudstate.samples.social.polls.BasicPollVote ) returns ( .cloudstate.samples.social.polls.Empty );
+  rpc GetCounts ( .cloudstate.samples.social.polls.BasicPoll ) returns ( stream .cloudstate.samples.social.polls.BasicPollCount );
+}
+----
+
+Finally, let's test the `AddUserVote` and `GetCounts` methods. These methods require input parameters which should be serialized as JSON string. The data schema is defined in https://github.com/jpollock/js-social-poll/blob/main/social-poll.proto[Social Poll service descriptor].
+
+The `AddUserVote` submits a vote.  `GetCounts` returns to the client a response as a stream. The client here is the terminal session running `grpcurl`. The client must be listening continuously to receive the response stream (ie. the terminal session looks like it is stuck in an infinite loop).
+
+[source,shell]
+----
+# Open a new terminal session and run (Ctrl-C to stop/restart)
+$ grpcurl -plaintext -d '{"name": "Poll 1"}' \
+  localhost:9002 \
+  cloudstate.samples.social.polls.BasicPollService.GetCounts
+
+# console output: {} means no votes have been submitted
+{
+}
+
+# Open a new terminal session and run (Ctrl-C to stop/restart)
+$ grpcurl -plaintext -d '{"name": "Poll 1", "vote": {"user": "Sam"}}' \
+  localhost:9002 \
+  cloudstate.samples.social.polls.BasicPollService.AddUserVote
+
+# console output:
+# - nothing in this terminal
+# - however, in the terminal where the `GetCounts` method is running, the console should output
+{
+  "total": 1
+}
+----
+
